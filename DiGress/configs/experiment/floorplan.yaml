@@ -1,0 +1,28 @@
+# @package _global_
+general:
+    name: 'floorplan'
+    gpus: 1
+    wandb: 'disabled'
+    resume: null
+    test_only: null
+    check_val_every_n_epochs: 10
+    sample_every_val: 5
+    samples_to_generate: 64
+    samples_to_save: 16
+    chains_to_save: 1
+    final_model_samples_to_generate: 256
+    final_model_samples_to_save: 64
+    final_model_chains_to_save: 5
+
+train:
+    n_epochs: 500
+    batch_size: 64
+    save_model: true
+
+model:
+    diffusion_steps: 500
+    n_layers: 6
+    lambda_train: [5, 1]
+    extra_features: 'all'
+    hidden_mlp_dims: {'X': 256, 'E': 128, 'y': 256}
+    hidden_dims: {'dx': 256, 'de': 64, 'dy': 1000, 'n_head': 8, 'dim_ffX': 256, 'dim_ffE': 64, 'dim_ffy': 256}
