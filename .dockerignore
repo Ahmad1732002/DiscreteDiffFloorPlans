@@ -1,0 +1,15 @@
+# Data files - downloaded at runtime
+Interface/static/
+Interface/retrieval/
+DiGress/data/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Git
+.git/
+
+# Outputs
+outputs/

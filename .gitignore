@@ -12,5 +12,9 @@ Interface/retrieval/
 Interface/db.sqlite3
 *.log
 
+# DiGress runtime data and outputs
+DiGress/data/
+outputs/
+
 # Misc
 .DS_Store
