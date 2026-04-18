@@ -97,9 +97,9 @@ def retrieval(test_data,k,multi_clusters):
     datum = test_data
     # vis_boundary(datum.boundary)
 
-    t1 = time.clock()
+    t1 = time.perf_counter()
     index = retriever.retrieve_cluster(datum,k,multi_clusters)
-    t2 = time.clock()
+    t2 = time.perf_counter()
     print('cluster',t2-t1)
     data_retrieval = vw.train_data[index]
     # data_retrieval= trainNameList[index]

@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Data files (large - do not commit)
+Interface/static/
+Interface/retrieval/
+
+# Django
+Interface/db.sqlite3
+*.log
+
+# Misc
+.DS_Store
