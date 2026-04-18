@@ -1,4 +1,4 @@
-FROM pytorch/pytorch:2.0.1-cuda11.7-cudnn8-runtime
+FROM pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime
 
 WORKDIR /app
 
@@ -11,7 +11,7 @@ COPY . .
 # Install PyG and its required C++ extensions for PyTorch 2.0.1 + CUDA 11.7
 RUN pip install --no-cache-dir \
     torch_scatter torch_sparse torch_cluster \
-    -f https://data.pyg.org/whl/torch-2.0.1+cu117.html
+    -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
 
 # Install DiGress dependencies
 RUN pip install --no-cache-dir -r /app/DiGress/requirements.txt

@@ -5,6 +5,7 @@ import warnings
 
 import torch
 torch.cuda.empty_cache()
+torch.set_float32_matmul_precision('high')
 import hydra
 from omegaconf import DictConfig
 from pytorch_lightning import Trainer
