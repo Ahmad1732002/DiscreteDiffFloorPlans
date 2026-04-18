@@ -16,6 +16,8 @@ RUN pip install --no-cache-dir \
 # Install DiGress dependencies
 RUN pip install --no-cache-dir -r /app/DiGress/requirements.txt
 
+RUN pip install --no-cache-dir rdkit
+
 RUN chmod +x /app/scripts/run_training.sh
 
 CMD ["/app/scripts/run_training.sh"]

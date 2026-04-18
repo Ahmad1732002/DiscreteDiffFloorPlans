@@ -1,0 +1,4 @@
+name: floorplan_constrained
+datadir: data/floorplan/
+remove_h: null
+use_tf_conditioning: true
