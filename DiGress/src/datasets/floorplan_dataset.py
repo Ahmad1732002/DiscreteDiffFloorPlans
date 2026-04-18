@@ -196,7 +196,8 @@ class FloorplanDataset(InMemoryDataset):
             if self.use_tf_conditioning else None
 
         idx         = _get_split_indices(len(all_data))[self.split]
-        floor_plans = all_data[idx]
+        # Support both list and numpy-array storage formats
+        floor_plans = [all_data[i] for i in idx]
         tfs         = tf_all[idx] if tf_all is not None else None
 
         data_list = []
