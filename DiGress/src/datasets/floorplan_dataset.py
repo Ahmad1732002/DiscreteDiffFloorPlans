@@ -237,7 +237,6 @@ class FloorplanDataModule(AbstractDataModule):
 
 class FloorplanDatasetInfos(AbstractDatasetInfos):
     def __init__(self, datamodule, dataset_config):
-        self.datamodule  = datamodule
         self.name        = 'floorplan'
         self.n_nodes     = datamodule.node_counts()
         self.node_types  = datamodule.node_types()
