@@ -3,7 +3,7 @@ FROM pytorch/pytorch:2.0.1-cuda11.7-cudnn8-runtime
 WORKDIR /app
 
 # System deps
-RUN apt-get update && apt-get install -y wget unzip git && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y wget unzip git libxrender1 libxext6 && rm -rf /var/lib/apt/lists/*
 
 # Copy repo (data is excluded via .dockerignore)
 COPY . .
