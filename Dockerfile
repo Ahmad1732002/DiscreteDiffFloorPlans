@@ -15,11 +15,20 @@ RUN pip install --no-cache-dir \
     torch_scatter torch_sparse torch_cluster \
     -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
 
+# torchvision (base runtime image omits it; needed for RoIAlign in Graph2Plan)
+RUN pip install --no-cache-dir torchvision==0.16.0
+
 # DiGress Python dependencies
 RUN pip install --no-cache-dir -r /app/DiGress/requirements.txt
 
+# torchmetrics image extras (FID / KID in evaluate.py)
+RUN pip install --no-cache-dir "torchmetrics[image]==0.11.4"
+
 # rdkit (needed by molecular metrics even when not used)
 RUN pip install --no-cache-dir rdkit
+
+# opencv (headless — no display needed in container)
+RUN pip install --no-cache-dir opencv-python-headless
 
 # Make all scripts executable
 RUN chmod +x /app/scripts/*.sh
