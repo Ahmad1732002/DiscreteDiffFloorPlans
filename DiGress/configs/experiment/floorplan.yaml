@@ -18,8 +18,6 @@ train:
     n_epochs: 500
     batch_size: 64
     save_model: true
-
-train:
     clip_grad: 1.0
 
 model:
