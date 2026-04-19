@@ -19,10 +19,13 @@ train:
     batch_size: 64
     save_model: true
 
+train:
+    clip_grad: 1.0
+
 model:
     diffusion_steps: 500
     n_layers: 6
     lambda_train: [5, 1]
-    extra_features: 'all'
+    extra_features: 'cycles'
     hidden_mlp_dims: {'X': 256, 'E': 128, 'y': 256}
     hidden_dims: {'dx': 256, 'de': 64, 'dy': 1000, 'n_head': 8, 'dim_ffX': 256, 'dim_ffE': 64, 'dim_ffy': 256}

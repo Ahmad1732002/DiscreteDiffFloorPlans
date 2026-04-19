@@ -143,11 +143,8 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
                       f" y_CE: {to_log['train_epoch/y_CE'] :.3f}"
                       f" -- {time.time() - self.start_epoch_time:.1f}s ")
         epoch_at_metrics, epoch_bond_metrics = self.train_metrics.log_epoch_metrics()
-        self.print(f"Epoch {self.current_epoch}: {epoch_at_metrics} -- {epoch_bond_metrics}")
-        if torch.cuda.is_available():
-            print(torch.cuda.memory_summary())
-        else:
-            print("CUDA is not available. Skipping memory summary.")
+        if epoch_at_metrics is not None:
+            self.print(f"Epoch {self.current_epoch}: {epoch_at_metrics} -- {epoch_bond_metrics}")
 
     def on_validation_epoch_start(self) -> None:
         self.val_nll.reset()
@@ -212,8 +209,7 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
                 samples_left_to_generate -= to_generate
                 chains_left_to_save -= chains_save
             self.print("Computing sampling metrics...")
-            self.sampling_metrics.forward(samples, self.name, self.current_epoch, val_counter=-1, test=False,
-                                          local_rank=self.local_rank)
+            self.sampling_metrics.forward(samples, self.name, self.current_epoch, test=False)
             self.print(f'Done. Sampling took {time.time() - start:.2f} seconds\n')
             print("Validation epoch end ends...")
 
@@ -297,7 +293,7 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
                     f.write("\n")
                 f.write("\n")
         self.print("Generated graphs Saved. Computing sampling metrics...")
-        self.sampling_metrics(samples, self.name, self.current_epoch, self.val_counter, test=True, local_rank=self.local_rank)
+        self.sampling_metrics(samples, self.name, self.current_epoch, test=True)
         self.print("Done testing.")
 
 
