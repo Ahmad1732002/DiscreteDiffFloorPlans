@@ -1,10 +1,10 @@
-FROM pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime
+FROM --platform=linux/amd64 pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime
 
 WORKDIR /app
 
 # System deps
 RUN apt-get update && apt-get install -y \
-    wget unzip git libxrender1 libxext6 \
+    wget unzip git libxrender1 libxext6 libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy repo first (data excluded via .dockerignore)
