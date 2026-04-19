@@ -2,3 +2,4 @@ name: floorplan_constrained
 datadir: data/floorplan/
 remove_h: null
 use_tf_conditioning: true
+cfg_p_uncond: 0.15   # fraction of training steps where constraint portion of y is zeroed (CFG dropout)

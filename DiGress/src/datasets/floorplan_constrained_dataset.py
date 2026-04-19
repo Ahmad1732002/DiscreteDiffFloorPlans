@@ -95,6 +95,25 @@ def _encode_constraints(boxes, edges, boundary):
     return np.concatenate([counts, loc_masks.flatten(), adj.flatten()])
 
 
+class CFGDropoutTransform:
+    """
+    Classifier-free guidance dropout applied at runtime on the training dataset.
+    With probability p_uncond, zeros out the constraint portion of y (indices TF_DIM:)
+    while keeping the TF boundary descriptor intact.
+    This lets the model learn both constrained and unconstrained generation
+    so inference can run with or without room constraints.
+    """
+    def __init__(self, p_uncond: float = 0.15):
+        self.p_uncond = p_uncond
+
+    def __call__(self, data):
+        if self.p_uncond > 0 and torch.rand(1).item() < self.p_uncond:
+            data = data.clone()
+            data.y = data.y.clone()
+            data.y[:, TF_DIM:] = 0.0  # zero out constraints, keep TF
+        return data
+
+
 def _build_pyg_constrained(floor_plan, tf_vec=None):
     """
     Like _build_pyg but y = [TF(1000) | constraints(164)] = 1164 dims.
@@ -201,9 +220,14 @@ class FloorplanConstrainedDataModule(AbstractDataModule):
         base_path  = pathlib.Path(os.path.realpath(__file__)).parents[2]
         root_path  = os.path.join(base_path, cfg.dataset.datadir)
         use_tf     = getattr(cfg.dataset, 'use_tf_conditioning', True)
+        p_uncond   = getattr(cfg.dataset, 'cfg_p_uncond', 0.15)
+
+        # CFG dropout only on training split — val/test always see full constraints
+        cfg_transform = CFGDropoutTransform(p_uncond=p_uncond) if p_uncond > 0 else None
+        print(f'[CFG] p_uncond={p_uncond}  (constraint dropout rate during training)')
 
         datasets = {
-            'train': FloorplanConstrainedDataset('train', root_path, use_tf),
+            'train': FloorplanConstrainedDataset('train', root_path, use_tf, transform=cfg_transform),
             'val':   FloorplanConstrainedDataset('val',   root_path, use_tf),
             'test':  FloorplanConstrainedDataset('test',  root_path, use_tf),
         }
