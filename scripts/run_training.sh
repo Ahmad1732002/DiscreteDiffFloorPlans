@@ -39,6 +39,9 @@ fi
 # Point DiGress dataset config at the volume data
 mkdir -p /app/DiGress/data/floorplan
 ln -sfn "$DATA_DIR" /app/DiGress/data/floorplan/raw
+# Store processed .pt files on volume so Docker rebuilds don't re-process
+mkdir -p "$STORAGE_PATH/data/floorplan/processed"
+ln -sfn "$STORAGE_PATH/data/floorplan/processed" /app/DiGress/data/floorplan/processed
 
 echo "=== Starting DiGress training ==="
 cd /app/DiGress

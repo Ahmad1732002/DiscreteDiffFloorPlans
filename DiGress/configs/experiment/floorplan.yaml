@@ -15,7 +15,7 @@ general:
     final_model_chains_to_save: 5
 
 train:
-    n_epochs: 500
+    n_epochs: 400
     batch_size: 64
     save_model: true
     clip_grad: 1.0

@@ -8,7 +8,7 @@ class TrainAbstractMetricsDiscrete(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, masked_pred_X, masked_pred_E, true_X, true_E, log: bool):
+    def forward(self, *args, **kwargs):
         pass
 
     def reset(self):
