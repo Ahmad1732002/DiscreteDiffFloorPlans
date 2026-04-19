@@ -4,6 +4,7 @@ import json
 import model.test as mltest
 import model.utils as mdul
 from model.floorplan import *
+import model.digress_bridge as digress_bridge
 import retrieval.retrieval as rt
 import time
 import pickle
@@ -12,6 +13,7 @@ import numpy as np
 from model.decorate import *
 import math
 import pandas as pd
+import os
 import matlab.engine
 
 global test_data, test_data_topk, testNameList, trainNameList
@@ -31,10 +33,20 @@ def Init(request):
     loadMatlabEng()
     loadModel()
     loadRetrieval()
+    loadDigress()
     end = time.perf_counter()
-    print('Init(model+test+train+engine+retrieval) time: %s Seconds' % (end - start))
+    print('Init(model+test+train+engine+retrieval+digress) time: %s Seconds' % (end - start))
 
     return HttpResponse(None)
+
+
+def loadDigress():
+    ckpt = os.environ.get('DIGRESS_CKPT', './static/last.ckpt')
+    ok = digress_bridge.init_model(ckpt)
+    if ok:
+        print('[DiGress] Ready')
+    else:
+        print('[DiGress] Not available (set DIGRESS_CKPT env var or place checkpoint at ./static/last.ckpt)')
 
 
 def loadMatlabEng():
@@ -751,6 +763,110 @@ def retrieve_bf(tf_trainsub, datum, k=20):
         index = np.argpartition(dist, k)[:k]
         index = index[np.argsort(dist[index])]
     return index
+
+
+def DigressGenerate(request):
+    import copy
+    if not digress_bridge.is_loaded():
+        return JsonResponse({'error': 'DiGress model not loaded. Place checkpoint at ./static/last.ckpt or set DIGRESS_CKPT.'}, status=503)
+
+    testName = request.GET.get('testName', '').split('.')[0]
+    try:
+        test_index = testNameList.index(testName)
+    except ValueError:
+        return JsonResponse({'error': f'Unknown testName: {testName}'}, status=400)
+
+    data = test_data[test_index]
+    boundary = np.asarray(data.boundary)
+    exterior = ' '.join(f'{float(r[0])},{float(r[1])}' for r in boundary)
+
+    # Stage 1: DiGress generates room graph conditioned on boundary TF descriptor
+    try:
+        results = digress_bridge.sample_rooms(boundary, num_samples=1)
+    except Exception as exc:
+        return JsonResponse({'error': f'DiGress sampling failed: {str(exc)}'}, status=500)
+
+    room_names = results[0]['rooms']
+    edges = results[0]['edges']
+    n = len(room_names)
+    if n == 0:
+        return JsonResponse({'error': 'DiGress generated 0 rooms'}, status=500)
+
+    # Map DiGress room names → Graph2Plan vocab indices ('Wall' → 'Wall-in')
+    name_remap = {'Wall': 'Wall-in'}
+    room_indices = [mdul.vocab['object_name_to_idx'].get(name_remap.get(r, r), 0) for r in room_names]
+
+    # Seed FloorPlan with uniform grid initial boxes (GNN will predict the real positions)
+    bx0 = int(np.min(boundary[:, 0]))
+    bx1 = int(np.max(boundary[:, 0]))
+    by0 = int(np.min(boundary[:, 1]))
+    by1 = int(np.max(boundary[:, 1]))
+    bw, bh = bx1 - bx0, by1 - by0
+    ncols = max(1, int(np.ceil(np.sqrt(n))))
+    nrows = max(1, int(np.ceil(n / ncols)))
+    cw = max(1, bw // ncols)
+    ch = max(1, bh // nrows)
+
+    boxes = []
+    for i, ridx in enumerate(room_indices):
+        col = i % ncols
+        row = i // ncols
+        x0 = int(bx0 + col * cw)
+        y0 = int(by0 + row * ch)
+        x1 = min(int(x0 + cw), bx1)
+        y1 = min(int(y0 + ch), by1)
+        boxes.append([x0, y0, x1, y1, ridx])
+
+    edge_arr = np.array([[u, v, 0] for u, v in edges], dtype=int) if edges else np.zeros((0, 3), dtype=int)
+
+    fp_data = copy.deepcopy(data)
+    fp_data.box = np.array(boxes, dtype=int)
+    fp_data.edge = edge_arr
+
+    fp_digress = FloorPlan(fp_data)
+    fp_digress.adjust_graph()
+
+    # Stage 2: Graph2Plan GNN — identical call to TransGraph_net
+    try:
+        boxes_pred, gene_layout, _ = mltest.test(model, fp_digress)
+    except Exception as exc:
+        return JsonResponse({'error': f'GNN inference failed: {str(exc)}'}, status=500)
+
+    # Convert all numpy scalars to native Python types for JSON serialisation
+    def _f(x): return float(x)
+    def _i(x): return int(x)
+
+    boxes_pred_py = [[_f(v) for v in row] for row in (boxes_pred * 255)]
+
+    rooms_idx = fp_digress.get_rooms(tensor=False)
+    center = [
+        [_f(fp_digress.data.box[k][0] + fp_digress.data.box[k][2]) / 2,
+         _f(fp_digress.data.box[k][1] + fp_digress.data.box[k][3]) / 2]
+        for k in range(len(rooms_idx))
+    ]
+
+    data_js = {}
+    triples = fp_digress.get_triples(tensor=False)
+    if triples.ndim == 2 and triples.shape[0] > 0:
+        data_js["hsedge"] = [[_i(r[0]), _i(r[2]), _i(r[1])] for r in triples]
+    else:
+        data_js["hsedge"] = []
+    data_js["rmpos"] = [
+        [_i(rooms_idx[k]), mdul.room_label[_i(rooms_idx[k])][1], center[k][0], center[k][1]]
+        for k in range(len(center))
+    ]
+    data_js["roomret"] = [
+        [boxes_pred_py[k], [mdul.room_label[_i(rooms_idx[k])][1]]]
+        for k in range(len(rooms_idx))
+    ]
+    data_js['exterior'] = exterior
+    data_js['door'] = (f'{_f(boundary[0][0])},{_f(boundary[0][1])},'
+                       f'{_f(boundary[1][0])},{_f(boundary[1][1])}')
+    data_js['bbxarea'] = _f(
+        (_f(np.max(boundary[:, 0])) - _f(np.min(boundary[:, 0]))) *
+        (_f(np.max(boundary[:, 1])) - _f(np.min(boundary[:, 1])))
+    )
+    return JsonResponse(data_js)
 
 
 if __name__ == "__main__":

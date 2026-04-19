@@ -17,11 +17,7 @@ adjust=False
 
 def get_data(fp):
     batch = list(fp.get_test_data())
-    batch[0] = batch[0].unsqueeze(0).cuda()
-    batch[1] = batch[1].cuda()
-    batch[2] = batch[2].cuda()
-    batch[3] = batch[3].cuda()
-    batch[4] = batch[4].cuda()
+    batch[0] = batch[0].unsqueeze(0)
     return batch
 
 def test(model,fp):
@@ -50,11 +46,9 @@ def test(model,fp):
         return boxes_pred.squeeze().cpu().numpy(),gene_preds.squeeze().cpu().double().numpy(),boxes_refine.squeeze().cpu().numpy()
 
 def load_model():
-    
     model = Model()
-    model.cuda(0)
     model.load_state_dict(
-        torch.load('./model/model.pth', map_location={'cuda:0': 'cuda:0'}))
+        torch.load('./model/model.pth', map_location='cpu'))
     model.eval()
     return model
 

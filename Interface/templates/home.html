@@ -844,7 +844,35 @@
                      style="cursor: pointer;background-color: #0072cb;color: #fff;width: 90px;border-radius: 30px;text-align: center;vertical-align: middle;line-height: 30px;height: 30px;position: absolute;margin-left:972px;">
                     Transfer
                 </div>
+                <div id="digressBtn" onclick="generateDigress()"
+                     style="cursor: pointer;background-color: #7b4ea0;color: #fff;width: 150px;border-radius: 30px;text-align: center;vertical-align: middle;line-height: 30px;height: 30px;position: absolute;margin-left:1080px;">
+                    &#9654; DiGress Generate
+                </div>
+            </div>
 
+            <!-- DiGress result panel -->
+            <div id="digressPanel" class="row-fluid"
+                 style="margin-top: 590px; margin-left: 4%; margin-bottom: 2%; display: none;">
+                <div style="display:flex; align-items:center; margin-bottom:8px;">
+                    <span style="font-size:16px; font-weight:bold; color:#7b4ea0;">&#9670; DiGress Generated Room Graph</span>
+                    <span id="digressStatus" style="margin-left:16px; font-size:13px; color:#888;"></span>
+                </div>
+                <div style="display:flex;">
+                    <div id="digressBox"
+                         style="border:2px solid #c9a8e0; width:516px; height:516px; border-radius:20px; position:relative; background:#faf7fd;">
+                        <svg id="DigressBoundarySVG" width="256" height="256"
+                             style="position:absolute; margin-left:128px; margin-top:128px; border-radius:20px;"></svg>
+                        <svg id="DigressGraphSVG" width="256" height="256"
+                             style="position:absolute; z-index:10; margin-left:128px; margin-top:128px;"></svg>
+                    </div>
+                    <div id="digressLegend"
+                         style="margin-left:20px; border:2px solid #c9a8e0; border-radius:20px; padding:16px; width:250px; background:#faf7fd;">
+                        <div style="font-weight:bold; margin-bottom:8px;">Room Types</div>
+                        <div id="digressRoomList" style="font-size:13px; line-height:24px;"></div>
+                        <div style="font-weight:bold; margin-top:12px; margin-bottom:4px;">Adjacencies</div>
+                        <div id="digressEdgeList" style="font-size:12px; color:#555; line-height:20px; max-height:200px; overflow-y:auto;"></div>
+                    </div>
+                </div>
             </div>
             <!--/.fluid-container-->
             <link rel='stylesheet' type='text/css' href='../static/css/index.css'>
@@ -880,6 +908,124 @@
 <script src="../static/Page/js/bootstrap.min.js"></script>
 <script src="../static/js/mo.min.js"></script>
 <script src="../static/js/btnEvent.js"></script>
+
+<script>
+// ---- DiGress integration ----
+function generateDigress() {
+    var testName = null;
+    var arr, reg = new RegExp("(^| )hsname=([^;]*)(;|$)");
+    if ((arr = reg.exec(document.cookie)) != null) { testName = arr[2]; }
+    if (!testName) {
+        alert('Load a test boundary first (click Load and select a floor plan image).');
+        return;
+    }
+    var btn = document.getElementById('digressBtn');
+    var status = document.getElementById('digressStatus');
+    btn.style.opacity = '0.5';
+    btn.style.cursor = 'wait';
+    status.textContent = 'Running DiGress + GNN... (may take ~60s on CPU)';
+    document.getElementById('digressPanel').style.display = 'block';
+
+    fetch('/index/DigressGenerate/?testName=' + encodeURIComponent(testName))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+            if (data.error) {
+                status.textContent = 'Error: ' + data.error;
+                return;
+            }
+            status.textContent = data.rmpos.length + ' rooms, ' + data.hsedge.length + ' adjacencies';
+            renderDigressResult(data);
+        })
+        .catch(function(e) {
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+            status.textContent = 'Request failed: ' + e;
+        });
+}
+
+// Renders DiGress result using same coordinate space as the retrieval right panel.
+// data format matches TransGraph_net: roomret, rmpos, hsedge, exterior, door
+function renderDigressResult(data) {
+    d3.select('#DigressBoundarySVG').selectAll('*').remove();
+    d3.select('#DigressGraphSVG').selectAll('*').remove();
+
+    var border = 4;
+    var hsex = data.exterior;
+    var interiorwall_color = roomcolor('Interior wall');
+    var extwall_color = roomcolor('Exterior wall');
+
+    // --- Layout: GNN-predicted room boxes ---
+    if (data.roomret) {
+        for (var i = 0; i < data.roomret.length; i++) {
+            var bx = data.roomret[i][0];
+            var color = roomcolor(data.roomret[i][1][0]);
+            d3.select('#DigressBoundarySVG')
+                .append('rect')
+                .attr('x', bx[0]).attr('y', bx[1])
+                .attr('width', bx[2] - bx[0]).attr('height', bx[3] - bx[1])
+                .attr('stroke-width', 3).attr('stroke', interiorwall_color)
+                .attr('fill', color);
+        }
+    }
+    // Boundary clip + outline
+    if (hsex) {
+        d3.select('#DigressBoundarySVG').append('clipPath')
+            .attr('id', 'DigressClip').append('polygon').attr('points', hsex);
+        d3.select('#DigressBoundarySVG').attr('clip-path', 'url(#DigressClip)');
+        d3.select('#DigressBoundarySVG').append('polygon').attr('points', hsex)
+            .attr('fill', 'none').attr('stroke', extwall_color).attr('stroke-width', 6);
+    }
+    // Door line
+    if (data.door) {
+        var d2 = data.door.split(',');
+        d3.select('#DigressBoundarySVG').append('line')
+            .attr('x1', d2[0]).attr('y1', d2[1]).attr('x2', d2[2]).attr('y2', d2[3])
+            .attr('stroke', roomcolor('Front door')).attr('stroke-width', 6);
+    }
+    d3.select('#DigressBoundarySVG').attr('transform', 'scale(2)');
+
+    // --- Graph overlay: edges + node circles ---
+    if (data.hsedge && data.rmpos) {
+        for (var i = 0; i < data.hsedge.length; i++) {
+            var a = data.hsedge[i][0], b = data.hsedge[i][1];
+            d3.select('#DigressGraphSVG').append('line')
+                .attr('x1', data.rmpos[a][2]).attr('y1', data.rmpos[a][3])
+                .attr('x2', data.rmpos[b][2]).attr('y2', data.rmpos[b][3])
+                .attr('stroke', '#000').attr('stroke-width', '2px');
+        }
+        for (var i = 0; i < data.rmpos.length; i++) {
+            d3.select('#DigressGraphSVG').append('circle')
+                .attr('cx', data.rmpos[i][2]).attr('cy', data.rmpos[i][3])
+                .attr('fill', roomcolor(data.rmpos[i][1]))
+                .attr('r', 5).attr('stroke', '#000').attr('stroke-width', 2);
+        }
+        d3.select('#DigressGraphSVG').attr('transform', 'scale(2)');
+    }
+
+    // --- Sidebar ---
+    var roomCounts = {};
+    data.rmpos.forEach(function(r){ roomCounts[r[1]] = (roomCounts[r[1]]||0)+1; });
+    var roomHtml = '';
+    Object.keys(roomCounts).sort().forEach(function(r){
+        var c = roomcolor(r).toString();
+        roomHtml += '<div style="display:flex;align-items:center;margin-bottom:3px;">'
+            + '<div style="width:14px;height:14px;border-radius:50%;background:'+c
+            + ';border:1px solid #999;flex-shrink:0;"></div>'
+            + '<span style="margin-left:8px;">' + r
+            + (roomCounts[r]>1?' &times;'+roomCounts[r]:'') + '</span></div>';
+    });
+    document.getElementById('digressRoomList').innerHTML = roomHtml;
+
+    var edgeHtml = '';
+    data.hsedge.forEach(function(e){
+        var a = data.rmpos[e[0]][1], b = data.rmpos[e[1]][1];
+        edgeHtml += '<div>' + a + ' &mdash; ' + b + '</div>';
+    });
+    document.getElementById('digressEdgeList').innerHTML = edgeHtml || '<span style="color:#aaa;">none</span>';
+}
+</script>
 <!-- end: JavaScript-->
 
 </body>
