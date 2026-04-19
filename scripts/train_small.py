@@ -178,8 +178,6 @@ def main():
 
     datamodule = SmallFloorplanDataModule(cfg, n_train=args.n_train, n_val=args.n_val)
 
-    extra_features = ExtraFeatures(cfg.model.extra_features, dataset_info=None) \
-        if cfg.model.extra_features else DummyExtraFeatures()
     domain_features = DummyExtraFeatures()
 
     dataset_infos = FloorplanDatasetInfos(datamodule, cfg.dataset)
