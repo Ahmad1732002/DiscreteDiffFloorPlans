@@ -1,11 +1,19 @@
-FROM --platform=linux/amd64 pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime
+FROM --platform=linux/amd64 nvidia/cuda:12.1.0-cudnn8-runtime-ubuntu20.04
 
 WORKDIR /app
 
-# System deps
+# System deps + Python
 RUN apt-get update && apt-get install -y \
+    python3.9 python3.9-dev python3-pip \
     wget unzip git libxrender1 libxext6 libgl1 \
+    && ln -sf /usr/bin/python3.9 /usr/bin/python \
+    && ln -sf /usr/bin/pip3 /usr/bin/pip \
     && rm -rf /var/lib/apt/lists/*
+
+# PyTorch 2.1.0 + CUDA 12.1
+RUN pip install --no-cache-dir \
+    torch==2.1.0+cu121 \
+    --index-url https://download.pytorch.org/whl/cu121
 
 # Copy repo first (data excluded via .dockerignore)
 COPY . .
