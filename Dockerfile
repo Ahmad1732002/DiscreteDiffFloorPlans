@@ -25,34 +25,38 @@ RUN pip install --no-cache-dir rdkit
 RUN chmod +x /app/scripts/*.sh
 
 # ── Runtime configuration ─────────────────────────────────────────────────────
-# STORAGE_PATH : where data + checkpoints are stored (mount a volume here)
-#   default: /mnt/storage
-# TRAINING_MODE: "baseline" | "constrained" | "small"  (default: constrained)
+# STORAGE_PATH  : volume mount point for data + checkpoints  (default: /mnt/storage)
+# TRAINING_MODE : "baseline" | "constrained" | "eval"        (default: constrained)
 #
-# For TRAINING_MODE=small the following env vars are also honoured:
-#   N_TRAIN      number of training samples  (default 1000)
-#   N_VAL        number of val samples       (default 100)
-#   EPOCHS       training epochs             (default 100)
-#   BATCH_SIZE                               (default 32)
-#   VAL_EVERY    validate every N epochs     (default 5)
-#   LR           learning rate               (default 0.0002)
-#   WEIGHT_DECAY                             (default 0.0001)
-#   RUN_NAME     name for checkpoints dir    (default small_test)
+# Extra env vars for eval mode:
+#   CKPT_PATH         path to .ckpt file      (default: $STORAGE_PATH/checkpoints/last.ckpt)
+#   NUM_EVAL_SAMPLES  test samples to run     (default: 500)
+#   EVAL_OUT          results output dir      (default: $STORAGE_PATH/eval_results)
+#   EVAL_SEED         random seed             (default: 42)
 #
 # Example runs:
-#   docker run --gpus all -v /storage:/mnt/storage -e TRAINING_MODE=small <image>
+#   # train (constrained, default)
+#   docker run --gpus all -v /storage:/mnt/storage <image>
+#
+#   # train (baseline)
+#   docker run --gpus all -v /storage:/mnt/storage -e TRAINING_MODE=baseline <image>
+#
+#   # evaluate a checkpoint
 #   docker run --gpus all -v /storage:/mnt/storage \
-#     -e TRAINING_MODE=small -e N_TRAIN=1000 -e N_VAL=100 -e EPOCHS=100 <image>
+#     -e TRAINING_MODE=eval \
+#     -e CKPT_PATH=/mnt/storage/checkpoints/epoch=99.ckpt \
+#     -e NUM_EVAL_SAMPLES=500 \
+#     <image>
 # ─────────────────────────────────────────────────────────────────────────────
 
 ENV STORAGE_PATH=/mnt/storage
-ENV TRAINING_MODE=small
+ENV TRAINING_MODE=eval
 
 CMD ["/bin/bash", "-c", "\
   if [ \"$TRAINING_MODE\" = 'baseline' ]; then \
     exec /app/scripts/run_training.sh; \
-  elif [ \"$TRAINING_MODE\" = 'small' ]; then \
-    exec /app/scripts/run_training_small.sh; \
+  elif [ \"$TRAINING_MODE\" = 'eval' ]; then \
+    exec /app/scripts/run_evaluation.sh; \
   else \
     exec /app/scripts/run_training_constrained.sh; \
   fi"]

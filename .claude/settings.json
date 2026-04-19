@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(python scripts/generate_test_pkl.py --train Interface/static/Data/data_train_converted.pkl --img Interface/static/Data/Img --out Interface/static/Data/data_test_gt.pkl)",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "Bash(git filter-branch *)",
+      "Bash(git stash *)",
+      "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch *)"
     ]
   }
 }
