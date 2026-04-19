@@ -4,7 +4,13 @@ set -e
 STORAGE_PATH="${STORAGE_PATH:-/mnt/storage}"
 
 # ── DiGress checkpoint ────────────────────────────────────────────────────────
-HF_TOKEN=""
+# HF_TOKEN must be set as a secret environment variable in Northflank —
+# never hardcode it here.
+if [ -z "$HF_TOKEN" ]; then
+    echo "ERROR: HF_TOKEN environment variable is not set."
+    echo "       Add it as a secret in your Northflank service environment."
+    exit 1
+fi
 HF_URL="https://huggingface.co/ahmadfraij/disdif/resolve/main/last-v1.ckpt"
 CKPT_PATH="$STORAGE_PATH/checkpoints/last-v1.ckpt"
 
