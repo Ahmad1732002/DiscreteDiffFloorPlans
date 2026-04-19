@@ -27,21 +27,32 @@ RUN chmod +x /app/scripts/*.sh
 # ── Runtime configuration ─────────────────────────────────────────────────────
 # STORAGE_PATH : where data + checkpoints are stored (mount a volume here)
 #   default: /mnt/storage
-# TRAINING_MODE: "baseline" | "constrained"  (default: constrained)
+# TRAINING_MODE: "baseline" | "constrained" | "small"  (default: constrained)
 #
-# Example run:
-#   docker run --gpus all \
-#     -v /your/host/storage:/mnt/storage \
-#     -e TRAINING_MODE=baseline \
-#     <image>
+# For TRAINING_MODE=small the following env vars are also honoured:
+#   N_TRAIN      number of training samples  (default 1000)
+#   N_VAL        number of val samples       (default 100)
+#   EPOCHS       training epochs             (default 100)
+#   BATCH_SIZE                               (default 32)
+#   VAL_EVERY    validate every N epochs     (default 5)
+#   LR           learning rate               (default 0.0002)
+#   WEIGHT_DECAY                             (default 0.0001)
+#   RUN_NAME     name for checkpoints dir    (default small_test)
+#
+# Example runs:
+#   docker run --gpus all -v /storage:/mnt/storage -e TRAINING_MODE=small <image>
+#   docker run --gpus all -v /storage:/mnt/storage \
+#     -e TRAINING_MODE=small -e N_TRAIN=1000 -e N_VAL=100 -e EPOCHS=100 <image>
 # ─────────────────────────────────────────────────────────────────────────────
 
 ENV STORAGE_PATH=/mnt/storage
-ENV TRAINING_MODE=constrained
+ENV TRAINING_MODE=small
 
 CMD ["/bin/bash", "-c", "\
   if [ \"$TRAINING_MODE\" = 'baseline' ]; then \
     exec /app/scripts/run_training.sh; \
+  elif [ \"$TRAINING_MODE\" = 'small' ]; then \
+    exec /app/scripts/run_training_small.sh; \
   else \
     exec /app/scripts/run_training_constrained.sh; \
   fi"]
