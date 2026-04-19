@@ -7,8 +7,8 @@ Room constraints can be passed at inference; if omitted the model generates unco
 
 Usage:
     # With boundary and room count constraints
-    python scripts/inference_constrained.py --ckpt last.ckpt \
-        --boundary "0,0 200,0 200,150 0,150" \
+    python scripts/inference_constrained.py --ckpt last.ckpt 
+        --boundary "0,0 200,0 200,150 0,150" 
         --rooms "LivingRoom:1,Kitchen:1,Bathroom:2,MasterRoom:1"
 
     # Unconstrained (boundary only)

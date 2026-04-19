@@ -63,84 +63,6 @@ def compute_tf(boundary_xy, ndim=1000):
 
 
 # -------------------------
-# Post-processing
-# -------------------------
-def post_process_graph(rooms, edges):
-    # 1. Remove self-loops & duplicates
-    clean_edges = set()
-    for u, v in edges:
-        if u == v:
-            continue
-        clean_edges.add(tuple(sorted((u, v))))
-    edges = list(clean_edges)
-
-    # 2. Enforce room count constraints
-    max_counts = {
-        "LivingRoom": 1,
-        "Kitchen": 1,
-        "Bathroom": 2,
-    }
-
-    new_rooms = []
-    mapping = {}
-    counts = {}
-
-    for i, r in enumerate(rooms):
-        if r in max_counts:
-            counts[r] = counts.get(r, 0) + 1
-            if counts[r] > max_counts[r]:
-                continue
-        mapping[i] = len(new_rooms)
-        new_rooms.append(r)
-
-    new_edges = []
-    for u, v in edges:
-        if u in mapping and v in mapping:
-            new_edges.append((mapping[u], mapping[v]))
-
-    rooms = new_rooms
-    edges = new_edges
-
-    # 3. Ensure required rooms
-    if "LivingRoom" not in rooms:
-        rooms.append("LivingRoom")
-    if "Bathroom" not in rooms:
-        rooms.append("Bathroom")
-
-    # 4. Ensure connectivity
-    if len(rooms) > 1:
-        parent = list(range(len(rooms)))
-
-        def find(x):
-            while parent[x] != x:
-                x = parent[x]
-            return x
-
-        def union(a, b):
-            parent[find(a)] = find(b)
-
-        for u, v in edges:
-            union(u, v)
-
-        comps = {}
-        for i in range(len(rooms)):
-            root = find(i)
-            comps.setdefault(root, []).append(i)
-
-        comps = list(comps.values())
-        if len(comps) > 1:
-            for i in range(len(comps) - 1):
-                edges.append((comps[i][0], comps[i + 1][0]))
-
-    # 5. Limit density
-    max_edges = len(rooms) * 2
-    if len(edges) > max_edges:
-        edges = edges[:max_edges]
-
-    return rooms, edges
-
-
-# -------------------------
 # Model loading
 # -------------------------
 def load_model(checkpoint_path):
@@ -204,13 +126,7 @@ def sample_conditional(model, tf_vec, num_samples=4):
         rooms = [ROOM_TYPES[min(int(t), 12)] for t in atom_types]
         edges = [(u, v) for u in range(n) for v in range(u + 1, n) if edge_types[u, v] == 1]
 
-        # Post-process
-        rooms_pp, edges_pp = post_process_graph(rooms, edges)
-
-        results.append({
-            'raw': {'rooms': rooms, 'edges': edges},
-            'processed': {'rooms': rooms_pp, 'edges': edges_pp}
-        })
+        results.append({'rooms': rooms, 'edges': edges})
 
     return results
 
@@ -239,23 +155,10 @@ def main():
 
     for i, r in enumerate(results):
         print(f"\n================ SAMPLE {i+1} ================\n")
-
-        # RAW
-        raw = r['raw']
-        print("RAW GRAPH:")
-        print(f"  Rooms ({len(raw['rooms'])}): {raw['rooms']}")
-        print(f"  Edges ({len(raw['edges'])}):")
-        for u, v in raw['edges']:
-            print(f"    {raw['rooms'][u]} -- {raw['rooms'][v]}")
-
-        # PROCESSED
-        proc = r['processed']
-        print("\nPOST-PROCESSED GRAPH:")
-        print(f"  Rooms ({len(proc['rooms'])}): {proc['rooms']}")
-        print(f"  Edges ({len(proc['edges'])}):")
-        for u, v in proc['edges']:
-            print(f"    {proc['rooms'][u]} -- {proc['rooms'][v]}")
-
+        print(f"  Rooms ({len(r['rooms'])}): {r['rooms']}")
+        print(f"  Edges ({len(r['edges'])}):")
+        for u, v in r['edges']:
+            print(f"    {r['rooms'][u]} -- {r['rooms'][v]}")
         print("\n===========================================\n")
 
 

@@ -23,9 +23,11 @@ NUM_LOC    = GRID_SIZE * GRID_SIZE  # 25
 # Size: 10 area-ratio bins (Section 5.1, d3=10)
 NUM_SIZE   = 10
 
-# Node feature layout matching Graph2Plan's get_attributes():
-#   [room_type (13) | location 5x5 (25) | size (10)] = 48 dims
-NODE_FEAT_DIM = NUM_ROOM_TYPES + NUM_LOC + NUM_SIZE  # 48
+# Node features for diffusion: room type only (one-hot over 13 classes).
+# Location and size are geometric post-processing; including them makes the
+# feature multi-hot (3 ones per row) which breaks the discrete diffusion math
+# (transition matrices, ELBO KL terms all assume truly one-hot / categorical).
+NODE_FEAT_DIM = NUM_ROOM_TYPES  # 13
 
 # Edge types: 0=no edge, 1-10=spatial relations matching Graph2Plan's 10 types
 # For diffusion we use binary (present / not present)
@@ -55,51 +57,19 @@ def _get_split_indices(n):
 
 def _encode_node_features(boxes, boundary):
     """
-    Encode room nodes as [room_type (13) | location 5x5 (25) | size (10)],
-    matching exactly the node representation in Graph2Plan (Section 5.1).
+    Encode room nodes as one-hot room type (13 dims).
 
     boxes:    (M, 5)  x0 y0 x1 y1 room_type  (0-255 pixel coords)
-    boundary: (N, 4)  x y dir isNew
-    Returns:  (M, 48) float tensor
+    boundary: (N, 4)  x y dir isNew  (unused here, kept for API compatibility)
+    Returns:  (M, 13) float tensor — truly one-hot, correct for discrete diffusion
     """
-    ext  = boundary[:, :2]
-    bx0, bx1 = ext[:, 0].min(), ext[:, 0].max()
-    by0, by1 = ext[:, 1].min(), ext[:, 1].max()
-    bw   = max(float(bx1 - bx0), 1.0)
-    bh   = max(float(by1 - by0), 1.0)
-    area = bw * bh
-
     M    = len(boxes)
     feat = np.zeros((M, NODE_FEAT_DIM), dtype=np.float32)
 
-    gbins = np.linspace(0, 1, GRID_SIZE + 1)
-    gbins[0], gbins[-1] = -np.inf, np.inf
-
-    abins = np.linspace(0, 1, NUM_SIZE + 1)
-    abins[0], abins[-1] = -np.inf, np.inf
-
     for i, box in enumerate(boxes):
-        x0, y0, x1, y1, rt = box
-        rt = int(rt)
-
-        # Room type (skip External = index 13)
+        rt = int(box[4])
         if 0 <= rt < NUM_ROOM_TYPES:
             feat[i, rt] = 1.0
-
-        # Normalized center relative to boundary bbox
-        cx_norm = (((x0 + x1) / 2.0) - bx0) / bw
-        cy_norm = (((y0 + y1) / 2.0) - by0) / bh
-
-        # 5x5 grid location (row-major: cx_bin * 5 + cy_bin)
-        cx_bin  = int(np.digitize(cx_norm, gbins)) - 1
-        cy_bin  = int(np.digitize(cy_norm, gbins)) - 1
-        loc_idx = NUM_ROOM_TYPES + cx_bin * GRID_SIZE + cy_bin
-        feat[i, loc_idx] = 1.0
-
-        # Area ratio bin
-        room_area = max(float((x1 - x0) * (y1 - y0)) / area, 0.0)
-        size_idx  = NUM_ROOM_TYPES + NUM_LOC + (int(np.digitize(room_area, abins)) - 1)
-        feat[i, size_idx] = 1.0
 
     return feat
 

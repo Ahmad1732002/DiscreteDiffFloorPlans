@@ -926,7 +926,7 @@ function generateDigress() {
     status.textContent = 'Running DiGress + GNN... (may take ~60s on CPU)';
     document.getElementById('digressPanel').style.display = 'block';
 
-    fetch('/index/DigressGenerate/?testName=' + encodeURIComponent(testName))
+    fetch('/index/DigressGenerate/?testName=' + encodeURIComponent(testName) + '&rooms=' + encodeURIComponent(JSON.stringify(roomvalarr)))
         .then(function(r) { return r.json(); })
         .then(function(data) {
             btn.style.opacity = '1';

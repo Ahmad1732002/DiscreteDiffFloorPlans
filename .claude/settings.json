@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python scripts/generate_test_pkl.py --train Interface/static/Data/data_train_converted.pkl --img Interface/static/Data/Img --out Interface/static/Data/data_test_gt.pkl)",
+      "Bash(python -c ' *)"
+    ]
+  }
+}

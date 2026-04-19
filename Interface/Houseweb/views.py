@@ -21,6 +21,20 @@ global train_data, trainNameList, trainTF, train_data_eNum, train_data_rNum
 global engview, model
 global tf_train, centroids, clusters
 
+test_data = []
+test_data_topk = []
+testNameList = []
+trainNameList = []
+train_data = []
+trainTF = []
+train_data_eNum = []
+train_data_rNum = []
+tf_train = None
+centroids = None
+clusters = None
+engview = None
+model = None
+
 
 def home(request):
     return render(request, "home.html", )
@@ -751,80 +765,6 @@ def GraphSearch(request):
     print("topkList", topkList)
     return HttpResponse(json.dumps(topkList), content_type="application/json")
 
-def post_process_graph(rooms, edges):
-    # 1. Remove self-loops & duplicates
-    clean_edges = set()
-    for u, v in edges:
-        if u == v:
-            continue
-        clean_edges.add(tuple(sorted((u, v))))
-    edges = list(clean_edges)
-
-    # 2. Enforce room count constraints
-    max_counts = {
-        "LivingRoom": 1,
-        "Kitchen": 1,
-        "Bathroom": 2,
-    }
-
-    new_rooms = []
-    mapping = {}
-    counts = {}
-
-    for i, r in enumerate(rooms):
-        if r in max_counts:
-            counts[r] = counts.get(r, 0) + 1
-            if counts[r] > max_counts[r]:
-                continue
-        mapping[i] = len(new_rooms)
-        new_rooms.append(r)
-
-    new_edges = []
-    for u, v in edges:
-        if u in mapping and v in mapping:
-            new_edges.append((mapping[u], mapping[v]))
-
-    rooms = new_rooms
-    edges = new_edges
-
-    # 3. Ensure required rooms
-    if "LivingRoom" not in rooms:
-        rooms.append("LivingRoom")
-    if "Bathroom" not in rooms:
-        rooms.append("Bathroom")
-
-    # 4. Ensure connectivity
-    if len(rooms) > 1:
-        parent = list(range(len(rooms)))
-
-        def find(x):
-            while parent[x] != x:
-                x = parent[x]
-            return x
-
-        def union(a, b):
-            parent[find(a)] = find(b)
-
-        for u, v in edges:
-            union(u, v)
-
-        comps = {}
-        for i in range(len(rooms)):
-            root = find(i)
-            comps.setdefault(root, []).append(i)
-
-        comps = list(comps.values())
-        if len(comps) > 1:
-            for i in range(len(comps) - 1):
-                edges.append((comps[i][0], comps[i + 1][0]))
-
-    # 5. Limit density
-    max_edges = len(rooms) * 2
-    if len(edges) > max_edges:
-        edges = edges[:max_edges]
-
-    return rooms, edges
-
 def retrieve_bf(tf_trainsub, datum, k=20):
     # compute tf for the data boundary
     x, y = rt.compute_tf(datum.boundary)
@@ -849,31 +789,45 @@ def DigressGenerate(request):
     except ValueError:
         return JsonResponse({'error': f'Unknown testName: {testName}'}, status=400)
 
+    # Parse room constraints from UI roomvalarr [LivingRoom, MasterRoom, Kitchen, Bathroom,
+    # DiningRoom, ChildRoom, StudyRoom, SecondRoom, GuestRoom, Balcony, Entrance, Storage, Wall, BedRoom]
+    _ROOM_NAMES = ['LivingRoom', 'MasterRoom', 'Kitchen', 'Bathroom',
+                   'DiningRoom', 'ChildRoom', 'StudyRoom', 'SecondRoom',
+                   'GuestRoom', 'Balcony', 'Entrance', 'Storage', 'Wall']
+    room_counts = None
+    rooms_json = request.GET.get('rooms', None)
+    if rooms_json:
+        try:
+            roomvalarr = json.loads(rooms_json)
+            counts = {}
+            for i, name in enumerate(_ROOM_NAMES):
+                val = roomvalarr[i] if i < len(roomvalarr) else 0
+                if val and val != 0 and val != '0' and val != 'Any':
+                    try:
+                        cnt = int(str(val).replace('+', '').strip())
+                        if cnt > 0:
+                            counts[name] = cnt
+                    except (ValueError, TypeError):
+                        pass
+            if counts:
+                room_counts = counts
+        except Exception:
+            pass
+
     data = test_data[test_index]
     boundary = np.asarray(data.boundary)
     exterior = ' '.join(f'{float(r[0])},{float(r[1])}' for r in boundary)
 
-    # Stage 1: DiGress generates room graph conditioned on boundary TF descriptor
+    # Stage 1: DiGress generates room graph conditioned on boundary TF + room constraints
     try:
-        results = digress_bridge.sample_rooms(boundary, num_samples=1)
+        results = digress_bridge.sample_rooms(boundary, num_samples=1, room_counts=room_counts)
     except Exception as exc:
         return JsonResponse({'error': f'DiGress sampling failed: {str(exc)}'}, status=500)
 
-    # room_names = results[0]['rooms']
-    # edges = results[0]['edges']
+    room_names = results[0]['rooms']
+    edges      = results[0]['edges']
 
-        # RAW output from DiGress
-    room_names_raw = results[0]['rooms']
-    edges_raw = results[0]['edges']
-
-    # POST-PROCESS (Stage 1.5)
-    room_names, edges = post_process_graph(room_names_raw, edges_raw)
-
-    print("\n[DiGress RAW]")
-    print("Rooms:", room_names_raw)
-    print("Edges:", edges_raw)
-
-    print("\n[DiGress POST-PROCESSED]")
+    print("\n[DiGress]")
     print("Rooms:", room_names)
     print("Edges:", edges)
     n = len(room_names)
