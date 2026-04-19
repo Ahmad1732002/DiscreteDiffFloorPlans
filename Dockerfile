@@ -1,20 +1,19 @@
-FROM --platform=linux/amd64 nvidia/cuda:12.1.0-cudnn8-runtime-ubuntu20.04
+FROM --platform=linux/amd64 nvidia/cuda:12.1.0-cudnn8-runtime-ubuntu22.04
 
 WORKDIR /app
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 
-# System deps + Python
+# System deps + Python 3.10 (default on Ubuntu 22.04)
 RUN apt-get update && apt-get install -y \
-    python3.9 python3.9-dev python3-pip \
+    python3 python3-pip python3-dev \
     wget unzip git libxrender1 libxext6 libgl1 \
-    && ln -sf /usr/bin/python3.9 /usr/bin/python \
-    && ln -sf /usr/bin/pip3 /usr/bin/pip \
+    && ln -sf /usr/bin/python3 /usr/bin/python \
     && rm -rf /var/lib/apt/lists/*
 
 # PyTorch 2.1.0 + CUDA 12.1
-RUN pip install --no-cache-dir \
+RUN pip3 install --no-cache-dir \
     torch==2.1.0+cu121 \
     --index-url https://download.pytorch.org/whl/cu121
 
@@ -22,24 +21,24 @@ RUN pip install --no-cache-dir \
 COPY . .
 
 # PyG C++ extensions pinned to torch 2.1.0 + cu121
-RUN pip install --no-cache-dir \
+RUN pip3 install --no-cache-dir \
     torch_scatter torch_sparse torch_cluster \
     -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
 
 # torchvision (base runtime image omits it; needed for RoIAlign in Graph2Plan)
-RUN pip install --no-cache-dir torchvision==0.16.0
+RUN pip3 install --no-cache-dir torchvision==0.16.0
 
 # DiGress Python dependencies
-RUN pip install --no-cache-dir -r /app/DiGress/requirements.txt
+RUN pip3 install --no-cache-dir -r /app/DiGress/requirements.txt
 
 # torchmetrics image extras (FID / KID in evaluate.py)
-RUN pip install --no-cache-dir "torchmetrics[image]==0.11.4"
+RUN pip3 install --no-cache-dir "torchmetrics[image]==0.11.4"
 
 # rdkit (needed by molecular metrics even when not used)
-RUN pip install --no-cache-dir rdkit
+RUN pip3 install --no-cache-dir rdkit
 
 # opencv (headless — no display needed in container)
-RUN pip install --no-cache-dir opencv-python-headless
+RUN pip3 install --no-cache-dir opencv-python-headless
 
 # Make all scripts executable
 RUN chmod +x /app/scripts/*.sh
