@@ -348,12 +348,14 @@ class DiscreteDenoisingDiffusion(pl.LightningModule):
 
         # Compute distributions to compare with KL
         bs, n, d = X.shape
-        prob_true = diffusion_utils.posterior_distributions(X=X, E=E, y=y, X_t=noisy_data['X_t'], E_t=noisy_data['E_t'],
-                                                            y_t=noisy_data['y_t'], Qt=Qt, Qsb=Qsb, Qtb=Qtb)
+        # y is conditioning only (not diffused, ydim_output=0) — pass empty tensors to posterior_distributions
+        empty_y = torch.zeros(bs, 0, device=X.device, dtype=X.dtype)
+        prob_true = diffusion_utils.posterior_distributions(X=X, E=E, y=empty_y, X_t=noisy_data['X_t'], E_t=noisy_data['E_t'],
+                                                            y_t=empty_y, Qt=Qt, Qsb=Qsb, Qtb=Qtb)
         prob_true.E = prob_true.E.reshape((bs, n, n, -1))
-        prob_pred = diffusion_utils.posterior_distributions(X=pred_probs_X, E=pred_probs_E, y=pred_probs_y,
+        prob_pred = diffusion_utils.posterior_distributions(X=pred_probs_X, E=pred_probs_E, y=empty_y,
                                                             X_t=noisy_data['X_t'], E_t=noisy_data['E_t'],
-                                                            y_t=noisy_data['y_t'], Qt=Qt, Qsb=Qsb, Qtb=Qtb)
+                                                            y_t=empty_y, Qt=Qt, Qsb=Qsb, Qtb=Qtb)
         prob_pred.E = prob_pred.E.reshape((bs, n, n, -1))
 
         # Reshape and filter masked rows
