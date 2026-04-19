@@ -2,6 +2,9 @@ FROM --platform=linux/amd64 nvidia/cuda:12.1.0-cudnn8-runtime-ubuntu20.04
 
 WORKDIR /app
 
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=UTC
+
 # System deps + Python
 RUN apt-get update && apt-get install -y \
     python3.9 python3.9-dev python3-pip \
