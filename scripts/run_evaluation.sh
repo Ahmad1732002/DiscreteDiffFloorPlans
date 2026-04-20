@@ -17,15 +17,27 @@ else
     echo "=== Checkpoint already present, skipping download ==="
 fi
 
-# ── Data paths: volume takes priority, fall back to image ────────────────────
+# ── Data: download from HuggingFace if not already on volume ─────────────────
 G2P_MODEL="/app/Interface/model/model.pth"
+TEST_DATA="$STORAGE_PATH/data/data_test_converted.pkl"
+TRAIN_DATA="$STORAGE_PATH/data/data_train_converted.pkl"
 
-if [ -f "$STORAGE_PATH/data/data_test_converted.pkl" ]; then
-    TEST_DATA="$STORAGE_PATH/data/data_test_converted.pkl"
-    TRAIN_DATA="$STORAGE_PATH/data/data_train_converted.pkl"
+mkdir -p "$STORAGE_PATH/data"
+
+if [ ! -f "$TEST_DATA" ]; then
+    echo "=== Downloading test data from HuggingFace ==="
+    wget -q --show-progress -O "$TEST_DATA" \
+        "https://huggingface.co/ahmadfraij/disdif/resolve/main/data_test_converted.pkl"
 else
-    TEST_DATA="/app/Interface/static/Data/data_test_converted.pkl"
-    TRAIN_DATA="/app/Interface/static/Data/data_train_converted.pkl"
+    echo "=== Test data already present, skipping download ==="
+fi
+
+if [ ! -f "$TRAIN_DATA" ]; then
+    echo "=== Downloading train data from HuggingFace ==="
+    wget -q --show-progress -O "$TRAIN_DATA" \
+        "https://huggingface.co/ahmadfraij/disdif/resolve/main/data_train_converted.pkl"
+else
+    echo "=== Train data already present, skipping download ==="
 fi
 
 NUM_EVAL_SAMPLES="${NUM_EVAL_SAMPLES:-2500}"
