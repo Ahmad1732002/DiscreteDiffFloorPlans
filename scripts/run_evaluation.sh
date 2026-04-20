@@ -17,10 +17,16 @@ else
     echo "=== Checkpoint already present, skipping download ==="
 fi
 
-# ── All other data is baked into the image ────────────────────────────────────
+# ── Data paths: volume takes priority, fall back to image ────────────────────
 G2P_MODEL="/app/Interface/model/model.pth"
-TEST_DATA="/app/Interface/static/Data/data_test_converted.pkl"
-TRAIN_DATA="/app/Interface/static/Data/data_train_converted.pkl"
+
+if [ -f "$STORAGE_PATH/data/data_test_converted.pkl" ]; then
+    TEST_DATA="$STORAGE_PATH/data/data_test_converted.pkl"
+    TRAIN_DATA="$STORAGE_PATH/data/data_train_converted.pkl"
+else
+    TEST_DATA="/app/Interface/static/Data/data_test_converted.pkl"
+    TRAIN_DATA="/app/Interface/static/Data/data_train_converted.pkl"
+fi
 
 NUM_EVAL_SAMPLES="${NUM_EVAL_SAMPLES:-2500}"
 EVAL_OUT="$STORAGE_PATH/eval_results"
