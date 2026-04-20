@@ -43,6 +43,9 @@ RUN pip3 install --no-cache-dir rdkit
 # opencv (headless — no display needed in container)
 RUN pip3 install --no-cache-dir opencv-python-headless
 
+# Force numpy back to 1.x — rdkit pulls numpy 2.x which breaks scipy 1.11.0
+RUN pip3 install --no-cache-dir "numpy==1.24.4" "scipy==1.11.0"
+
 # Make all scripts executable
 RUN chmod +x /app/scripts/*.sh
 
