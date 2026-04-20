@@ -28,6 +28,9 @@ RUN pip3 install --no-cache-dir \
 # torchvision (base runtime image omits it; needed for RoIAlign in Graph2Plan)
 RUN pip3 install --no-cache-dir torchvision==0.16.0
 
+# Pin numpy+scipy together before other deps to avoid ABI mismatch
+RUN pip3 install --no-cache-dir numpy==1.24.4 scipy==1.11.0
+
 # DiGress Python dependencies
 RUN pip3 install --no-cache-dir -r /app/DiGress/requirements.txt
 
