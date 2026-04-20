@@ -785,6 +785,7 @@
                         </div>
 
                     </div>
+                    <div style="position:absolute; font-size:13px; font-weight:bold; color:#555; margin-top:-20px;">Input / Graph</div>
                     <div id="leftbox"
                          style="border:2px solid #d2d2d2;width: 516px;height: 516px;position: absolute;border-radius: 20px;">
                         <svg id="LeftBaseSVG" width="256" height="256"
@@ -805,6 +806,7 @@
                             </div>
                         </div>
                     </div>
+                    <div style="position:absolute; margin-left:736px; font-size:13px; font-weight:bold; color:#555; margin-top:-20px;">Retrieval</div>
                     <div id="rightbox"
                          style="border:2px solid #d2d2d2;width: 516px;height: 516px;    position: absolute;margin-left: 736px;border-radius: 20px;">
                         <svg id="RightLayoutSVG" width="256" height="256"
@@ -812,6 +814,14 @@
                         <svg id="RightSVG" width="256" height="256"
                              style="position: absolute;z-index: 999;margin-top: 128px;margin-left: 128px;"></svg>
                     </div><!--/span-->
+                    <div style="position:absolute; margin-left:1272px; font-size:13px; font-weight:bold; color:#7b4ea0; margin-top:-20px;">DiGress</div>
+                    <div id="digressInlineBox"
+                         style="border:2px solid #c9a8e0; width:516px; height:516px; position:absolute; margin-left:1272px; border-radius:20px; background:#faf7fd; display:none;">
+                        <svg id="DigressBoundarySVG" width="256" height="256"
+                             style="position:absolute; margin-left:128px; margin-top:128px; border-radius:20px;"></svg>
+                        <svg id="DigressGraphSVG" width="256" height="256"
+                             style="position:absolute; z-index:10; margin-left:128px; margin-top:128px;"></svg>
+                    </div>
 
                 </div>
                 <script src="../static/select/index4.js"></script>
@@ -850,30 +860,7 @@
                 </div>
             </div>
 
-            <!-- DiGress result panel -->
-            <div id="digressPanel" class="row-fluid"
-                 style="margin-top: 590px; margin-left: 4%; margin-bottom: 2%; display: none;">
-                <div style="display:flex; align-items:center; margin-bottom:8px;">
-                    <span style="font-size:16px; font-weight:bold; color:#7b4ea0;">&#9670; DiGress Generated Room Graph</span>
-                    <span id="digressStatus" style="margin-left:16px; font-size:13px; color:#888;"></span>
-                </div>
-                <div style="display:flex;">
-                    <div id="digressBox"
-                         style="border:2px solid #c9a8e0; width:516px; height:516px; border-radius:20px; position:relative; background:#faf7fd;">
-                        <svg id="DigressBoundarySVG" width="256" height="256"
-                             style="position:absolute; margin-left:128px; margin-top:128px; border-radius:20px;"></svg>
-                        <svg id="DigressGraphSVG" width="256" height="256"
-                             style="position:absolute; z-index:10; margin-left:128px; margin-top:128px;"></svg>
-                    </div>
-                    <div id="digressLegend"
-                         style="margin-left:20px; border:2px solid #c9a8e0; border-radius:20px; padding:16px; width:250px; background:#faf7fd;">
-                        <div style="font-weight:bold; margin-bottom:8px;">Room Types</div>
-                        <div id="digressRoomList" style="font-size:13px; line-height:24px;"></div>
-                        <div style="font-weight:bold; margin-top:12px; margin-bottom:4px;">Adjacencies</div>
-                        <div id="digressEdgeList" style="font-size:12px; color:#555; line-height:20px; max-height:200px; overflow-y:auto;"></div>
-                    </div>
-                </div>
-            </div>
+            <span id="digressStatus" style="display:none;"></span>
             <!--/.fluid-container-->
             <link rel='stylesheet' type='text/css' href='../static/css/index.css'>
             <style type="text/css">
@@ -924,7 +911,7 @@ function generateDigress() {
     btn.style.opacity = '0.5';
     btn.style.cursor = 'wait';
     status.textContent = 'Running DiGress + GNN... (may take ~60s on CPU)';
-    document.getElementById('digressPanel').style.display = 'block';
+    document.getElementById('digressInlineBox').style.display = 'block';
 
     fetch('/index/DigressGenerate/?testName=' + encodeURIComponent(testName) + '&rooms=' + encodeURIComponent(JSON.stringify(roomvalarr)))
         .then(function(r) { return r.json(); })
