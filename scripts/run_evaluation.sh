@@ -22,7 +22,7 @@ G2P_MODEL="/app/Interface/model/model.pth"
 TEST_DATA="/app/Interface/static/Data/data_test_converted.pkl"
 TRAIN_DATA="/app/Interface/static/Data/data_train_converted.pkl"
 
-NUM_EVAL_SAMPLES=500
+NUM_EVAL_SAMPLES="${NUM_EVAL_SAMPLES:-11249}"
 EVAL_OUT="$STORAGE_PATH/eval_results"
 EVAL_SEED=42
 
